@@ -3,38 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Keepy-Uppy: tap the ball before it hits the grass. How many touches can you do?">
+  <meta name="description" content="Keep the ball in the air, collect bonus stars and beat your best score. Play Keepy-Uppy with a mouse, touch or keyboard.">
   <meta name="theme-color" content="#153f30">
   <title>Keepy-Uppy — The Kickabout</title>
+  <link rel="canonical" href="https://swaruprihaan-arch.github.io/Lucas-Soccer/keepy-uppy.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="The Kickabout">
+  <meta property="og:title" content="Keepy-Uppy — The Kickabout">
+  <meta property="og:description" content="Keep the ball in the air, collect bonus stars and beat your best score. Play Keepy-Uppy with a mouse, touch or keyboard.">
+  <meta property="og:url" content="https://swaruprihaan-arch.github.io/Lucas-Soccer/keepy-uppy.html">
+  <meta property="og:image" content="https://swaruprihaan-arch.github.io/Lucas-Soccer/ball.png">
+  <meta property="og:image:width" content="550">
+  <meta property="og:image:height" content="550">
+  <meta property="og:image:alt" content="A black football with pink and lime panels">
+  <meta name="twitter:card" content="summary">
   <link rel="icon" href="ball.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <style>
-    /* Only what this page needs on top of style.css */
-    .keepy-main { padding-top: 40px; }
-    #game canvas { cursor: pointer; touch-action: none; }
-    .back-link { display: inline-block; margin: 0 0 22px; font-size: 14px; font-weight: 700; text-decoration: none; }
-    .back-link:hover { text-decoration: underline; }
-  </style>
+  <link rel="stylesheet" href="style.css?v=5">
+  <noscript><style>.game-frame, .arcade-tools, .arcade-meta, .hero-reset, .ball-area .intro { display: none !important; }</style></noscript>
 </head>
 <body>
   <a class="skip-link" href="#game">Skip to the game</a>
   <nav class="navigation" aria-label="Main navigation">
     <a class="wordmark" href="index.html" aria-label="The Kickabout home"><span class="brand-icon" aria-hidden="true">✳</span> THE KICKABOUT<span class="brand-dot">.</span></a>
-    <div class="nav-links"><a class="nav-play" href="index.html#game">Penalty Shootout <span aria-hidden="true">↗</span></a></div>
+    <div class="nav-links"><a class="nav-play" href="index.html#game" aria-label="Play Penalty Shootout"><span><span class="nav-wide">Penalty </span>Shootout</span> <span aria-hidden="true">↗</span></a></div>
   </nav>
   <main class="keepy-main">
     <section id="game" aria-labelledby="game-heading">
       <a class="back-link" href="index.html#projects">← Back to the line-up</a>
       <p class="eyebrow">PROJECT 02 · ON THE TRAINING GROUND</p>
       <h1 id="game-heading">Keepy-Uppy<span>.</span></h1>
-      <p class="game-sub">Tap the ball before it hits the grass. Each touch scores a point. Collect a star for 3 extra points. The ball gets smaller and the challenge grows as you go.</p>
+      <p class="game-sub">Keep the ball off the grass. Each touch earns 1 point; each star earns 3. The challenge grows with your score.</p>
       <div class="game-frame">
         <div class="game-viewport">
           <p class="sr-only" role="status" data-out="announcement" aria-atomic="true"></p>
-          <canvas id="keepy" width="800" height="520" tabindex="0" aria-label="Keepy-Uppy game. Tap or click the ball, or press Space, to keep it in the air.">Your browser needs canvas support to play this game.</canvas>
+          <canvas id="keepy" width="800" height="520" tabindex="0" role="application" aria-describedby="keepy-help" aria-label="Keepy-Uppy game. Tap or click the ball, or press Space, to keep it in the air.">Your browser needs canvas support to play this game.</canvas>
           <div class="game-overlay" data-screen="start">
             <div>
               <h3>Keepy-Uppy</h3>
@@ -52,11 +57,11 @@
         </div>
       </div>
       <noscript><p class="game-help">Enable JavaScript to play Keepy-Uppy.</p></noscript>
-      <p class="game-help"><span class="control-hint">Space to keep it up · ← → to steer · Esc to pause</span>Tip: the pink ring means the ball is close to the grass. Tap it now!</p>
+      <p class="game-help" id="keepy-help"><span class="control-hint">Space to keep it up · ← → to steer · Esc to pause</span>Tip: the pink ring means the ball is close to the grass. Tap it now!</p>
     </section>
   </main>
   <footer><a class="wordmark" href="index.html">THE KICKABOUT<span class="brand-dot">.</span></a><p>Made with curiosity, HTML & CSS. Still learning. Always playing.</p><a href="#">Back to the top ↑</a></footer>
-  <script src="site.js" defer></script>
-  <script src="keepy.js" defer></script>
+  <script src="site.js?v=5" defer></script>
+  <script src="keepy.js?v=5" defer></script>
 </body>
 </html>

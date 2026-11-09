@@ -24,7 +24,7 @@
   const label = g => g.title || "Game " + g.id;
 
   /* ---------- Selector with all 100 games ---------- */
-  select.innerHTML = '<option value="">Choose a game (1–' + GAMES.length + ')…</option>' +
+  select.innerHTML = '<option value="">Choose a game…</option>' +
     GAMES.map(g => `<option value="${g.id}">${pad(g.id)} · ${escapeHtml(label(g))}</option>`).join("");
   function selected() { return GAMES.find(g => g.id === +select.value); }
   select.addEventListener("change", () => { go.disabled = !select.value; });
@@ -54,7 +54,7 @@
     return (s.toLowerCase().match(/[a-z0-9]+/g) || []).filter(w => !STOP.has(w));
   }
   const index = GAMES.map(g => {
-    const text = [g.title, g.description, (g.tags || []).join(" "), g.title ? "" : ""].join(" ");
+    const text = [g.title, g.description, (g.tags || []).join(" ")].join(" ");
     return { title: words(g.title).map(stem), all: new Set(words(text).map(stem)) };
   });
 
@@ -71,20 +71,21 @@
 
   function run() {
     const raw = input.value.trim();
-    const num = raw.match(/^#?(\d{1,3})$/);
+    const num = raw.match(/^(?:game\s*)?#?(\d{1,3})$/i);
     const q = words(raw);
     let shown = 0;
     clear.hidden = !raw;
-    if (!raw) {
-      cards.forEach(c => { c.hidden = false; c.style.order = ""; });
+    if (!raw || (!q.length && !num)) {
+      cards.forEach(c => { c.hidden = false; grid.appendChild(c); });
       shown = cards.length;
     } else if (num) {                       // typing a number jumps to that game
-      cards.forEach(c => { c.hidden = +c.dataset.id !== +num[1]; c.style.order = ""; if (!c.hidden) shown++; });
+      cards.forEach(c => { c.hidden = +c.dataset.id !== +num[1]; grid.appendChild(c); if (!c.hidden) shown++; });
     } else {
       const scored = GAMES.map((g, i) => ({ i, s: q.length ? score(i, q) : 0 }));
+      scored.sort((a, b) => b.s - a.s || a.i - b.i);
       scored.forEach(({ i, s }) => {
         cards[i].hidden = s === 0;
-        cards[i].style.order = String(1000 - s * 10);   // best matches first
+        grid.appendChild(cards[i]); // Visual order and keyboard order stay together.
         if (s) shown++;
       });
     }
@@ -96,11 +97,14 @@
   root.querySelector(".arcade-search").addEventListener("submit", e => {
     e.preventDefault();
     run();
-    const first = cards.find(c => !c.hidden);
+    const first = [...grid.children].find(c => !c.hidden);
     if (first) first.querySelector(".arcade-play").focus();
   });
+  input.addEventListener("keydown", e => {
+    if (e.key === "Escape" && input.value) { e.preventDefault(); input.value = ""; run(); }
+  });
   clear.addEventListener("click", () => { input.value = ""; run(); input.focus(); });
-  root.querySelector("[data-arcade-showall]").addEventListener("click", () => { input.value = ""; run(); });
+  root.querySelector("[data-arcade-showall]").addEventListener("click", () => { input.value = ""; run(); input.focus(); });
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));

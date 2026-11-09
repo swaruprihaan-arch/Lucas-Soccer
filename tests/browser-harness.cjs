@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, reducedMotion = false, width = 800, density = 1, canvasSupport = true } = {}) {
+function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, reducedMotion = false, width = 800, density = 1, canvasSupport = true, includeHero = false } = {}) {
   let time = 0, nextId = 1, seed = 9281;
   const frames = new Map(), timers = new Map(), observers = [], resizeObservers = [];
   const stored = new Map(Object.entries(saved));
@@ -20,6 +20,8 @@ function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, r
     constructor(name = '') {
       this.name = name; this.style = {}; this.attrs = {}; this.events = new Map(); this.children = [];
       this.dataset = {}; this.textContent = ''; this.hidden = false; this.disabled = false;
+      this.classList = { values: new Set(), add(name) { this.values.add(name); }, remove(name) { this.values.delete(name); }, contains(name) { return this.values.has(name); } };
+      this.capture = null; this.offsetWidth = 144;
       this.width = 800; this.height = game === 'penalty' ? 480 : 520; this._html = '';
     }
     set innerHTML(value) {
@@ -34,6 +36,11 @@ function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, r
       (this.events.get(type) || []).forEach(fn => fn(event));
       return event;
     }
+    appendChild(child) { this.children.push(child); child.parentElement = this; }
+    remove() {}
+    setPointerCapture(id) { this.capture = id; }
+    hasPointerCapture(id) { return this.capture === id; }
+    releasePointerCapture(id) { if (this.capture === id) this.capture = null; }
     setAttribute(key, value) { this.attrs[key] = String(value); }
     getAttribute(key) { return this.attrs[key]; }
     focus() { document.activeElement = this; }
@@ -51,9 +58,16 @@ function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, r
   overlay.innerHTML = '<button data-action="play">Kick off</button>';
   const mute = new Element('mute'), pause = new Element('pause');
   mute.dataset.action = 'mute'; pause.dataset.action = 'pause';
+  const hero = new Element('hero'), pitch = new Element('pitch'), circle = new Element('circle'), reset = new Element('reset');
+  hero.parentElement = circle;
+  pitch.getBoundingClientRect = () => ({ left: 0, top: 0, right: 1100, bottom: 620, width: 1100, height: 620 });
+  circle.getBoundingClientRect = () => ({ left: 700, top: 200, right: 1000, bottom: 500, width: 300, height: 300 });
   const outputs = {};
   function query(selector) {
-    if (selector === '.ball' || selector === '.pitch') return null;
+    if (selector === '.ball') return includeHero ? hero : null;
+    if (selector === '.pitch') return includeHero ? pitch : null;
+    if (selector === '.intro span, .hint') return null;
+    if (selector === '[data-action="reset-ball"]') return reset;
     if (selector === '#game') return section;
     if (selector === 'canvas' || selector === '#keepy') return canvas;
     if (selector === '.game-overlay') return overlay;
@@ -64,11 +78,12 @@ function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, r
     return null;
   }
   document = new Element('document');
+  document.createElement = name => new Element(name);
   document.querySelector = query; document.getElementById = id => query(`#${id}`);
   document.hidden = false; document.activeElement = null;
   const window = new Element('window');
   window.devicePixelRatio = density;
-  const motion = { matches: reducedMotion, addEventListener() {} };
+  const motion = new Element('motion'); motion.matches = reducedMotion;
   window.matchMedia = () => motion;
   function IntersectionObserver(callback) { this.observe = () => observers.push(callback); }
   function ResizeObserver(callback) { this.observe = () => resizeObservers.push(callback); }
@@ -92,7 +107,8 @@ function createBrowser({ game = 'penalty', blockedStorage = false, saved = {}, r
   run('site.js'); run(game === 'penalty' ? 'game.js' : 'keepy.js');
   const state = game === 'penalty' ? window.penalty : window.keepy;
   return {
-    state, canvas, overlay, mute, pause, outputs, window, document, calls, stored, motion,
+    state, canvas, overlay, mute, pause, outputs, hero, reset, window, document, calls, stored, motion,
+    get pendingFrames() { return frames.size; },
     action(action) {
       const target = new Element('action'); target.dataset.action = action;
       overlay.emit('click', { target });

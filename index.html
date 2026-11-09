@@ -3,15 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A little football, a little code, a lot of play. Explore my coding projects and take on the Penalty Shootout challenge.">
+  <meta name="description" content="A little football, a little code, a lot of play. Take on Penalty Shootout and Keepy-Uppy in a playful coding playground.">
   <meta name="theme-color" content="#153f30">
   <title>The Kickabout — Football & Code</title>
+  <link rel="canonical" href="https://swaruprihaan-arch.github.io/Lucas-Soccer/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="The Kickabout">
+  <meta property="og:title" content="The Kickabout — Football &amp; Code">
+  <meta property="og:description" content="A little football, a little code, a lot of play. Take on Penalty Shootout and Keepy-Uppy in a playful coding playground.">
+  <meta property="og:url" content="https://swaruprihaan-arch.github.io/Lucas-Soccer/">
+  <meta property="og:image" content="https://swaruprihaan-arch.github.io/Lucas-Soccer/ball.png">
+  <meta property="og:image:width" content="550">
+  <meta property="og:image:height" content="550">
+  <meta property="og:image:alt" content="A black football with pink and lime panels">
+  <meta name="twitter:card" content="summary">
   <link rel="icon" href="ball.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="arcade.css">
+  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="arcade.css?v=5">
+  <noscript><style>.game-frame, .arcade-tools, .arcade-meta, .hero-reset, .ball-area .intro { display: none !important; }</style></noscript>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -25,15 +37,15 @@
     <h1>Big ideas.<br>Beautiful <em>game.</em></h1>
     <p class="hero-description">I’m learning to code, one kick at a time.<br>Welcome to my playground. Make yourself at home.</p>
     <a class="primary-link" href="#game">Play Penalty Shootout <span aria-hidden="true">↗</span></a></div>
-    <div class="ball-area"><div class="centre-circle"><button class="ball" type="button" aria-label="Kick the ball. Drag and release to aim, or press Enter to kick."></button></div><p class="intro"><strong>A little warm-up?</strong><span>Drag the ball to kick it into a goal.</span></p></div>
+    <div class="ball-area"><div class="centre-circle"><button class="ball" type="button" disabled aria-label="Kick the ball. Drag and release to aim, or press Enter to kick."></button></div><p class="intro"><strong>A little warm-up?</strong><span>Drag the ball to kick it into a goal.</span></p><button class="hero-reset" type="button" data-action="reset-ball">Reset ball <span aria-hidden="true">↺</span></button></div>
     <div class="pitch-bottom"><span>BUILT WITH CURIOSITY. POWERED BY FOOTBALL.</span><a href="#main">Explore the touchline <span aria-hidden="true">↓</span></a></div>
   </header>
   <main id="main">
     <section class="projects-section" id="projects" aria-labelledby="projects-heading">
       <div class="section-heading"><div><p class="eyebrow">FROM MY CODING NOTEBOOK</p><h2 id="projects-heading">The starting line-up<span>.</span></h2></div><p>Small projects. New skills.<br>Always something to play with.</p></div>
       <ol class="projects">
-        <li class="project"><span class="number" aria-hidden="true">01</span><div class="details"><span class="project-label">ON THE PITCH <i></i></span><h3>Penalty Shootout</h3><p>One ball. Three chances. Can you beat the keeper?</p></div><a class="button" href="#game">Play the game <span aria-hidden="true">↗</span></a></li>
-        <li class="project"><span class="number" aria-hidden="true">02</span><div class="details"><span class="project-label">ON THE TRAINING GROUND <i></i></span><h3>Keepy-Uppy</h3><p>Don't let it touch the grass. How many touches can you do?</p></div><a class="button" href="keepy-uppy.html">Play the game <span aria-hidden="true">↗</span></a></li>
+        <li class="project"><span class="number" aria-hidden="true">01</span><div class="details"><span class="project-label">ON THE PITCH <i></i></span><h3>Penalty Shootout</h3><p>One ball. Three chances. Can you beat the keeper?</p></div><a class="button" href="#game" aria-label="Play Penalty Shootout">Play the game <span aria-hidden="true">↗</span></a></li>
+        <li class="project"><span class="number" aria-hidden="true">02</span><div class="details"><span class="project-label">ON THE TRAINING GROUND <i></i></span><h3>Keepy-Uppy</h3><p>Don't let it touch the grass. How many touches can you do?</p></div><a class="button" href="keepy-uppy.html" aria-label="Play Keepy-Uppy">Play the game <span aria-hidden="true">↗</span></a></li>
       </ol>
     </section>
 
@@ -43,7 +55,7 @@
         <form class="arcade-search" role="search">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
           <label class="sr-label" for="arcade-search">Describe a game</label>
-          <input id="arcade-search" type="search" autocomplete="off" placeholder="Describe a game, e.g. &quot;shoot past the goalie&quot;">
+          <input id="arcade-search" type="search" autocomplete="off" placeholder="Try &quot;shoot past the goalie&quot;">
           <button class="arcade-clear" type="button" data-arcade-clear aria-label="Clear search" hidden>×</button>
         </form>
         <div class="arcade-pick">
@@ -54,6 +66,7 @@
       </div>
       <p class="arcade-meta"><span data-arcade-count aria-live="polite">All 100 games</span><span>Tip: type a number to jump to that game.</span></p>
       <ol class="arcade-grid"></ol>
+      <noscript><p>Enable JavaScript to search the arcade and play. Explore <a href="#game">Penalty Shootout</a> or <a href="keepy-uppy.html">Keepy-Uppy</a>.</p></noscript>
       <p class="arcade-empty" hidden>No games match that yet. Try other words, or <button type="button" data-arcade-showall>show all 100 games</button>.</p>
     </section>
 
@@ -63,7 +76,7 @@
     <p class="game-sub">Beat the keeper. Every goal makes him faster. Three misses and it's full time.</p>
     <div class="game-frame">
       <div class="game-viewport">
-      <p class="sr-only" role="status" data-out="announcement"></p><canvas width="800" height="480" aria-label="Penalty game. Use arrow keys to aim and Space or Enter to shoot.">Your browser needs canvas support to play this game.</canvas>
+      <p class="sr-only" role="status" data-out="announcement" aria-atomic="true"></p><canvas width="800" height="480" role="application" aria-describedby="penalty-help" aria-label="Penalty game. Use arrow keys to aim and Space or Enter to shoot.">Your browser needs canvas support to play this game.</canvas>
       <div class="game-overlay" data-screen="start">
         <div>
           <h3>Penalty Shootout</h3>
@@ -81,13 +94,13 @@
       </div>
     </div>
     <noscript><p class="game-help">Enable JavaScript to play Penalty Shootout.</p></noscript>
-    <p class="game-help"><span class="control-hint">Arrow keys to aim · Space to shoot · Esc to pause</span>Tip: the corners are hardest to save, but aim too close to the post and you might miss.</p>
+    <p class="game-help" id="penalty-help"><span class="control-hint">Arrow keys to aim · Space to shoot · Esc to pause</span>Tip: the corners are hardest to save, but aim too close to the post and you might miss.</p>
     </section>
   </main>
   <footer><a class="wordmark" href="#">THE KICKABOUT<span class="brand-dot">.</span></a><p>Made with curiosity, HTML & CSS. Still learning. Always playing.</p><a href="#">Back to the top ↑</a></footer>
-  <script src="site.js" defer></script>
-  <script src="game.js" defer></script>
+  <script src="site.js?v=5" defer></script>
+  <script src="game.js?v=5" defer></script>
   <script src="games/games.js"></script>
-  <script src="arcade.js" defer></script>
+  <script src="arcade.js?v=5" defer></script>
 </body>
 </html>

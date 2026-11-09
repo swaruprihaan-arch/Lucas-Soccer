@@ -1,7 +1,7 @@
 /* ============================================================
    keepy.js — Keepy-Uppy: tap the ball before it hits the grass.
    Each touch counts one. Gravity gets stronger as you go,
-   and wind starts pushing the ball after 10 touches.
+   and wind starts pushing the ball at 10 points.
    ============================================================ */
 (function () {
   "use strict";
@@ -36,7 +36,7 @@
     state: "start",            // start | play | over
     touches: 0, hits: 0, best: storage.score("lucas-keepy-best"),
     ball: { x: W / 2, y: GROUND - 160, vx: 0, vy: 0, r: 42, spin: 0, va: 0 },
-    wind: 0, windTarget: 0, windT: 0,
+    wind: 0, windTarget: 0,
     star: null, stars: 0,
     pops: [], dust: [], shake: 0
   };
@@ -45,6 +45,12 @@
   function gravity() { return 1500 + S.touches * 45; }      // gets heavier every touch
   function ballRadius() { return Math.max(26, 42 - S.touches * 0.4); } // and smaller
   function level() { return 1 + Math.floor(S.touches / 5); }
+  function updateDifficulty(changeWind = false) {
+    S.ball.r = ballRadius();
+    if (S.touches >= 10 && (S.windTarget === 0 || changeWind)) {
+      S.windTarget = (Math.random() - 0.5) * (200 + S.touches * 14);
+    }
+  }
 
   function updateBar() {
     out("score").textContent = S.touches;
@@ -58,6 +64,19 @@
   }
   muteBtn.addEventListener("click", () => sound.toggle());
   sound.onChange(updateBar);
+
+  function saveBest() {
+    const saved = storage.score("lucas-keepy-best");
+    S.best = Math.max(S.best, saved, S.touches);
+    if (S.best > saved) storage.set("lucas-keepy-best", S.best);
+  }
+  window.addEventListener("storage", event => {
+    if (event.key !== "lucas-keepy-best" && event.key !== null) return;
+    const saved = storage.score("lucas-keepy-best");
+    S.best = Math.max(S.best, saved);
+    previousBest = Math.max(previousBest, saved);
+    updateBar();
+  });
 
   let paused = false;
   let inView = true;
@@ -73,6 +92,7 @@
       overlay.hidden = true;
       last = performance.now();
       canvas.focus({ preventScroll: true });
+      wake();
     }
     updateBar();
   }
@@ -102,6 +122,7 @@
     announce("Kick off. Keep the ball in the air.");
     updateBar();
     canvas.focus({ preventScroll: true });
+    wake();
   }
 
   function spawnStar() {
@@ -129,12 +150,12 @@
     b.vy = -Math.max(780, Math.sqrt(gravity()) * 24);   // always enough to go up
     b.va = side * 14;
     S.touches++;
-    S.ball.r = ballRadius();
+    if (S.touches % 5 === 0) announce(`${S.touches} points. Level ${level()}.`);
+    updateDifficulty(S.hits % 4 === 0);
     if (!motion.matches) S.pops.push({ x: b.x, y: b.y - b.r - 10, t: 0, text: String(S.touches) });
     sfx.touch(S.touches);
-    if (S.touches >= 10 && (S.windTarget === 0 || S.hits % 4 === 0)) S.windTarget = (Math.random() - 0.5) * (200 + S.touches * 14);
     if (!S.star && S.touches >= 3 && Math.random() < 0.4) spawnStar();
-    if (S.touches > S.best) { S.best = S.touches; storage.set("lucas-keepy-best", String(S.best)); }
+    saveBest();
     updateBar();
     return true;
   }
@@ -164,24 +185,34 @@
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) setPaused(true, false);
+    else wake();
   });
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
       if (!inView) setPaused(true, false);
+      else wake();
     }).observe(canvas);
   }
 
   /* ---------- Game loop ---------- */
   let last = performance.now();
-  function loop(t) {
-    const dt = Math.min(0.033, (t - last) / 1000);
-    last = t;
-    if (!document.hidden && inView) {
-      if (!paused) update(dt);
-      render();
+  let frame = 0;
+  const needsAnimation = () => S.state === "play" || !motion.matches;
+  function wake() {
+    if (!frame && !paused && !document.hidden && inView && needsAnimation()) {
+      last = performance.now();
+      frame = requestAnimationFrame(loop);
     }
-    requestAnimationFrame(loop);
+  }
+  function loop(t) {
+    frame = 0;
+    if (paused || document.hidden || !inView) return;
+    const dt = Math.min(0.033, Math.max(0, (t - last) / 1000));
+    last = t;
+    update(dt);
+    render();
+    if (needsAnimation()) frame = requestAnimationFrame(loop);
   }
 
   function update(dt) {
@@ -204,11 +235,11 @@
       if (S.star) {
         S.star.t += dt;
         if (Math.hypot(S.star.x - b.x, S.star.y - b.y) < b.r + 22) {
-          S.stars++; S.touches += 3; S.ball.r = ballRadius();
+          S.stars++; S.touches += 3; updateDifficulty();
           announce(`Bonus star! Score: ${S.touches}.`);
           if (!motion.matches) S.pops.push({ x: S.star.x, y: S.star.y, t: 0, text: "+3" });
           S.star = null; sfx.star();
-          if (S.touches > S.best) { S.best = S.touches; storage.set("lucas-keepy-best", String(S.best)); }
+          saveBest();
           updateBar();
         } else if (S.star.t > 6) S.star = null;
       }
@@ -283,7 +314,7 @@
 
     // Ball
     ctx.save();
-    ctx.translate(b.x, b.y); ctx.rotate(b.spin);
+    ctx.translate(b.x, b.y); if (!motion.matches) ctx.rotate(b.spin);
     ctx.beginPath(); ctx.arc(0, 0, b.r, 0, Math.PI * 2); ctx.clip();
     if (ballImg.complete && ballImg.naturalWidth) ctx.drawImage(ballImg, -b.r * 1.08, -b.r * 1.08, b.r * 2.16, b.r * 2.16);
     else { ctx.fillStyle = "#fff"; ctx.fill(); }
@@ -313,9 +344,14 @@
     ctx.restore();
   }
 
+  motion.addEventListener("change", () => {
+    if (motion.matches) { S.pops = []; S.dust = []; S.shake = 0; }
+    render();
+    wake();
+  });
   surface.onResize(render);
   ballImg.addEventListener("load", render);
   updateBar();
   render();
-  requestAnimationFrame(loop);
+  wake();
 })();

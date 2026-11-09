@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153f30">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="https://swaruprihaan-arch.github.io/Lucas-Soccer/ball.png" type="image/png">
+  <title>Page not found — The Kickabout</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f6f5ed; color: #153f30; font: 17px/1.6 "Atkinson Hyperlegible", system-ui, sans-serif; }
+    main { max-width: 760px; margin: auto; padding: clamp(40px, 10vh, 100px) 24px; }
+    .brand { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: none; font: 900 26px/1 "Big Shoulders Display", Impact, sans-serif; }
+    .brand span { color: #bf527d; }
+    .pitch { position: relative; margin-top: 36px; padding: clamp(32px, 6vw, 56px); border-radius: 12px; background: repeating-linear-gradient(90deg, #296343 0 80px, #2d6948 80px 160px); color: #f6f5ed; }
+    .pitch::before { content: ""; position: absolute; inset: 14px; border: 1px solid #f6f5ed66; pointer-events: none; }
+    .number { margin: 0 0 16px; color: #e4ef86; font: 900 clamp(80px, 18vw, 140px)/1 "Big Shoulders Display", Impact, sans-serif; }
+    h1 { margin: 0 0 12px; font: 900 clamp(40px, 8vw, 64px)/1.05 "Big Shoulders Display", Impact, sans-serif; text-transform: uppercase; }
+    .message { max-width: 420px; margin: 0; }
+    nav { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+    nav a { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 12px 18px; border: 1px solid #e4ef86; border-radius: 5px; color: #153f30; background: #e4ef86; font-size: 15px; font-weight: 700; text-decoration: none; }
+    nav a:last-child { color: #f6f5ed; background: transparent; border-color: #f6f5ed; }
+    nav a:hover { background: #f6f5ed; color: #153f30; }
+    a:focus-visible { outline: 3px solid #bf527d; outline-offset: 5px; }
+    .pitch a:focus-visible { outline-color: #f6f5ed; }
+    @media (max-width: 380px) { nav a { width: 100%; } }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="brand" href="https://swaruprihaan-arch.github.io/Lucas-Soccer/">THE KICKABOUT<span>.</span></a>
+    <section class="pitch" aria-labelledby="not-found-heading">
+      <p class="number" aria-hidden="true">404</p>
+      <h1 id="not-found-heading">Offside<span aria-hidden="true">.</span></h1>
+      <p class="message">We couldn’t find that page. Head back to the pitch and give it another shot.</p>
+      <nav aria-label="Find your way back">
+        <a href="https://swaruprihaan-arch.github.io/Lucas-Soccer/"><span>Back to home</span><span aria-hidden="true">↗</span></a>
+        <a href="https://swaruprihaan-arch.github.io/Lucas-Soccer/keepy-uppy.html"><span>Play Keepy-Uppy</span><span aria-hidden="true">↗</span></a>
+      </nav>
+    </section>
+  </main>
+</body>
+</html>

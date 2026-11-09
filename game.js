@@ -2,8 +2,8 @@
    game.js — makes the page playable
    1. The hero ball: drag it and let go to kick it around the pitch.
       Get it into a goal (the gaps in the penalty boxes) to score.
-   2. Penalty Shootout: a mini game added under "My Coding Projects".
-   Works on its own: just add <script src="game.js" defer></script>.
+   2. Penalty Shootout: the penalty challenge on the home page.
+   Shared helpers are loaded first from site.js.
    ============================================================ */
 (function () {
   "use strict";
@@ -28,6 +28,7 @@
   let heroGoals = 0;
 
   if (ball && pitch) {
+    ball.disabled = false;
     const score = document.createElement("div");
     score.className = "hero-score";
     score.setAttribute("aria-live", "polite");
@@ -44,7 +45,7 @@
     let x = 0, y = 0, vx = 0, vy = 0, angle = 0;  // offset from the ball's home spot
     let dragging = false, moved = false, raf = 0, lastT = 0;
     let trail = [];
-    let celebrating = false;
+    let celebrating = false, returnFrame = 0, goalTimer = 0, activePointer = null;
 
     function bounds() {
       // How far the ball can travel from home before it hits the touchline
@@ -63,10 +64,19 @@
     }
     function goalBand() {
       const p = pitch.getBoundingClientRect();
-      return { top: p.top + p.height * 0.36, bottom: p.top + p.height * 0.64, p };
+      const circle = ball.parentElement.getBoundingClientRect();
+      const middle = circle.top + circle.height / 2;
+      const height = Math.min(180, p.height * 0.28);
+      const top = Math.max(p.top + 40, Math.min(p.bottom - height - 40, middle - height / 2));
+      return { top, bottom: top + height, p };
     }
     function placeMouths() {
       const g = goalBand();
+      const boxHeight = Math.min(g.p.height - 44, (g.bottom - g.top) * 1.65);
+      pitch.querySelectorAll(".box").forEach(box => {
+        box.style.top = ((g.top + g.bottom) / 2 - g.p.top - boxHeight / 2 - 22) + "px";
+        box.style.height = boxHeight + "px";
+      });
       mouths.forEach((m, i) => {
         m.style.top = (g.top - g.p.top) + "px";
         m.style.height = (g.bottom - g.top) + "px";
@@ -74,8 +84,17 @@
         m.style.right = i === 1 ? "8px" : "";
       });
     }
+    function fitPitch() {
+      placeMouths();
+      const B = bounds();
+      x = Math.max(B.minX, Math.min(B.maxX, x));
+      y = Math.max(B.minY, Math.min(B.maxY, y));
+      draw();
+    }
     placeMouths();
-    window.addEventListener("resize", () => { placeMouths(); x = Math.max(bounds().minX, Math.min(bounds().maxX, x)); y = Math.max(bounds().minY, Math.min(bounds().maxY, y)); draw(); });
+    window.addEventListener("resize", fitPitch);
+    if (document.fonts) document.fonts.ready.then(fitPitch);
+    if ("ResizeObserver" in window) new ResizeObserver(fitPitch).observe(pitch);
 
     function draw() {
       ball.style.transform = `translate(${x}px, ${y}px) rotate(${angle}deg)`;
@@ -101,13 +120,13 @@
       sfx.goal();
       vx = vy = 0;
       // Roll back to the centre spot
-      setTimeout(() => {
+      goalTimer = setTimeout(() => {
         const sx = x, sy = y, start = performance.now();
         (function back(t) {
           const k = motion.matches ? 1 : Math.min(1, (t - start) / 600), e = 1 - Math.pow(1 - k, 3);
           x = sx * (1 - e); y = sy * (1 - e); angle += (side < 0 ? 12 : -12);
           draw();
-          if (k < 1) requestAnimationFrame(back); else celebrating = false;
+          if (k < 1) returnFrame = requestAnimationFrame(back); else { returnFrame = 0; celebrating = false; }
         })(start);
       }, 700);
     }
@@ -142,9 +161,28 @@
     function goalThen(side) { raf = 0; draw(); goal(side); }
     function run() { if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(step); } }
 
+    function resetBall() {
+      clearTimeout(goalTimer);
+      cancelAnimationFrame(returnFrame);
+      cancelAnimationFrame(raf);
+      raf = returnFrame = 0;
+      dragging = moved = celebrating = false;
+      if (activePointer !== null && ball.hasPointerCapture(activePointer)) ball.releasePointerCapture(activePointer);
+      activePointer = null;
+      x = y = vx = vy = angle = 0;
+      draw();
+    }
+    pitch.querySelector('[data-action="reset-ball"]').addEventListener("click", resetBall);
+    ball.addEventListener("keydown", e => {
+      if (e.key === "Escape") { e.preventDefault(); resetBall(); }
+      if (e.repeat && (e.key === " " || e.key === "Enter")) e.preventDefault();
+    });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) resetBall(); });
+
     let startX = 0, startY = 0, baseX = 0, baseY = 0;
     ball.addEventListener("pointerdown", e => {
-      if (celebrating) return;
+      if (celebrating || activePointer !== null || e.button !== 0 || e.isPrimary === false) return;
+      activePointer = e.pointerId;
       dragging = true; moved = false;
       startX = e.clientX; startY = e.clientY; baseX = x; baseY = y;
       trail = [{ x: e.clientX, y: e.clientY, t: performance.now() }];
@@ -152,7 +190,7 @@
       ball.setPointerCapture(e.pointerId);
     });
     ball.addEventListener("pointermove", e => {
-      if (!dragging) return;
+      if (!dragging || e.pointerId !== activePointer) return;
       const dx = e.clientX - startX, dy = e.clientY - startY;
       if (!moved && Math.hypot(dx, dy) > 6) { moved = true; free(); }
       if (!moved) return;
@@ -163,11 +201,15 @@
       trail.push({ x: e.clientX, y: e.clientY, t: performance.now() });
       if (trail.length > 6) trail.shift();
     });
-    function release() {
-      if (!dragging) return;
+    function release(e) {
+      if (!dragging || e.pointerId !== activePointer) return;
       dragging = false;
+      activePointer = null;
       if (!moved) return;
-      const a = trail[0], b = trail[trail.length - 1];
+      const now = performance.now();
+      const recent = trail.filter(point => now - point.t < 120);
+      if (recent.length < 2) { vx = vy = 0; return; }
+      const a = recent[0], b = recent[recent.length - 1];
       const ms = Math.max(16, b.t - a.t);
       vx = (b.x - a.x) / ms * 1000 * 1.4;
       vy = (b.y - a.y) / ms * 1000 * 1.4;
@@ -177,12 +219,14 @@
       run();
     }
     ball.addEventListener("pointerup", release);
-    ball.addEventListener("pointercancel", () => { dragging = false; moved = false; vx = vy = 0; });
+    ball.addEventListener("pointercancel", e => { if (e.pointerId === activePointer) resetBall(); });
+    ball.addEventListener("lostpointercapture", () => { if (dragging) resetBall(); });
 
     // A plain click/tap (or Enter/Space) kicks it in a random direction
     ball.addEventListener("click", e => {
-      if (moved) { e.stopImmediatePropagation(); moved = false; return; }
+      if (moved && e.detail !== 0) { e.stopImmediatePropagation(); moved = false; return; }
       if (celebrating) return;
+      moved = false;
       free();
       const a = Math.random() * Math.PI * 2;
       vx = Math.cos(a) * 1500; vy = Math.sin(a) * 1500;
@@ -211,6 +255,7 @@
   const pauseBtn = section.querySelector('[data-action="pause"]');
   let paused = false;
   let inView = true;
+  let previousBest = 0;
   const W = 800, H = 480;
   const GOAL = { l: 190, r: 610, t: 70, b: 230 };      // goal mouth
   const SPOT = { x: 400, y: 420 };
@@ -247,6 +292,19 @@
   muteBtn.addEventListener("click", () => sound.toggle());
   sound.onChange(updateBar);
 
+  function saveBest() {
+    const saved = storage.score("lucas-best");
+    S.best = Math.max(S.best, saved, S.score);
+    if (S.best > saved) storage.set("lucas-best", S.best);
+  }
+  window.addEventListener("storage", event => {
+    if (event.key !== "lucas-best" && event.key !== null) return;
+    const saved = storage.score("lucas-best");
+    S.best = Math.max(S.best, saved);
+    previousBest = Math.max(previousBest, saved);
+    updateBar();
+  });
+
   function showOverlay(title, text, button, action = "play", focus = true) {
     overlay.innerHTML = `<div><h3>${title}</h3><p>${text}</p><button class="big" type="button" data-action="${action}">${button}</button></div>`;
     overlay.hidden = false;
@@ -265,22 +323,27 @@
       overlay.hidden = true;
       last = performance.now();
       canvas.focus({ preventScroll: true });
+      wake();
     }
     updateBar();
   }
   pauseBtn.addEventListener("click", () => setPaused(!paused));
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) setPaused(true, false);
+    else wake();
   });
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
       if (!inView) setPaused(true, false);
+      else wake();
     }).observe(canvas);
   }
 
   function startGame() {
     paused = false;
+    previousBest = S.best;
+    out("announcement").textContent = "Kick off. Aim with the arrow keys and press Space to shoot.";
     S.score = 0; S.misses = 0; S.confetti = [];
     S.aim = { x: 400, y: 150 };
     S.keeper.x = 400; S.keeper.dive = 0; S.keeper.phase = 0;
@@ -289,6 +352,7 @@
     resetShot();
     updateBar();
     canvas.focus({ preventScroll: true });
+    wake();
   }
   function resetShot() {
     S.state = "aim";
@@ -322,16 +386,16 @@
     const reach = keeperReach();
     const saved = inGoal && Math.abs(p.x - kx) < reach && p.y > GOAL.t + 10 - (reach - 46);
     if (saved) {
-      S.misses++; S.msg = "Saved!"; S.msgColor = "#f0559a"; sfx.save();
+      S.misses++; S.msg = "Saved!"; S.msgColor = "#ffd0e2"; sfx.save();
     } else if (inGoal) {
       S.score++; S.msg = "GOAL!"; S.msgColor = "#ddeb4a"; sfx.goal();
       for (let i = 0; i < (motion.matches ? 0 : 60); i++) S.confetti.push({ x: p.x, y: p.y, vx: (Math.random() - .5) * 500, vy: -Math.random() * 400, life: 1.2,
         c: ["#ddeb4a", "#f0559a", "#f6f8ee", "#5fd3c6"][i % 4] });
-      if (S.score > S.best) { S.best = S.score; storage.set("lucas-best", String(S.best)); }
+      saveBest();
     } else {
       S.misses++; S.msg = hitPost ? "Off the post!" : "Wide!"; S.msgColor = "#f6f8ee"; sfx.save();
     }
-    out("announcement").textContent = `${S.msg} ${S.score} goals. ${3 - S.misses} misses remaining.`;
+    out("announcement").textContent = `${S.msg} ${S.score} goal${S.score === 1 ? "" : "s"}. ${3 - S.misses} misses remaining.`;
     S.state = "result"; S.resultT = 0;
     updateBar();
   }
@@ -342,12 +406,15 @@
     return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
   }
   canvas.addEventListener("pointermove", e => {
+    if (e.isPrimary === false) return;
     if (paused || S.state !== "aim") return;
     const p = toCanvas(e);
     S.aim.x = Math.max(120, Math.min(680, p.x));
     S.aim.y = Math.max(30, Math.min(300, p.y));
   });
   canvas.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.isPrimary === false) return;
+    canvas.focus({ preventScroll: true });
     if (paused || S.state !== "aim") return;
     const p = toCanvas(e);
     S.aim.x = Math.max(120, Math.min(680, p.x));
@@ -355,32 +422,46 @@
     shoot();
   });
   canvas.tabIndex = 0;
-  document.addEventListener("keydown", e => {
-    const inGame = document.activeElement === canvas;
-    if (!inGame) return;
-    if (e.key === "Escape") { e.preventDefault(); setPaused(true); return; }
-    if (paused || S.state !== "aim" || e.altKey || e.ctrlKey || e.metaKey) return;
+  canvas.addEventListener("keydown", e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const key = e.key.toLowerCase();
+    if (key === "escape") { e.preventDefault(); setPaused(true); return; }
+    if (paused || S.state !== "aim") return;
     const step = 18;
-    if (e.key === "ArrowLeft" || e.key === "a") S.aim.x = Math.max(120, S.aim.x - step);
-    else if (e.key === "ArrowRight" || e.key === "d") S.aim.x = Math.min(680, S.aim.x + step);
-    else if (e.key === "ArrowUp" || e.key === "w") S.aim.y = Math.max(30, S.aim.y - step);
-    else if (e.key === "ArrowDown" || e.key === "s") S.aim.y = Math.min(300, S.aim.y + step);
-    else if (e.key === " " || e.key === "Enter") shoot();
+    if (key === "arrowleft" || key === "a") S.aim.x = Math.max(120, S.aim.x - step);
+    else if (key === "arrowright" || key === "d") S.aim.x = Math.min(680, S.aim.x + step);
+    else if (key === "arrowup" || key === "w") S.aim.y = Math.max(30, S.aim.y - step);
+    else if (key === "arrowdown" || key === "s") S.aim.y = Math.min(300, S.aim.y + step);
+    else if (key === " " || key === "enter") { if (!e.repeat) shoot(); }
     else return;
     e.preventDefault();
+    if (key.startsWith("arrow") || ["a", "d", "w", "s"].includes(key)) {
+      const horizontal = S.aim.x < 330 ? "left" : S.aim.x > 470 ? "right" : "centre";
+      const vertical = S.aim.y < 120 ? "high" : S.aim.y > 180 ? "low" : "middle";
+      out("announcement").textContent = `Aim: ${horizontal}, ${vertical}.`;
+    }
   });
 
   /* ---------- Game loop ---------- */
   let last = performance.now();
-  function loop(t) {
-    const dt = Math.min(0.033, (t - last) / 1000);
-    last = t;
-    if (!document.hidden && inView) {
-      if (!paused) update(dt);
-      render();
+  let frame = 0;
+  const needsAnimation = () => S.state !== "over" && (S.state !== "start" || !motion.matches);
+  function wake() {
+    if (!frame && !paused && !document.hidden && inView && needsAnimation()) {
+      last = performance.now();
+      frame = requestAnimationFrame(loop);
     }
-    requestAnimationFrame(loop);
   }
+  function loop(t) {
+    frame = 0;
+    if (paused || document.hidden || !inView) return;
+    const dt = Math.min(0.033, Math.max(0, (t - last) / 1000));
+    last = t;
+    update(dt);
+    render();
+    if (needsAnimation()) frame = requestAnimationFrame(loop);
+  }
+
   function update(dt) {
     const k = S.keeper;
     if (S.state === "aim" || (S.state === "start" && !motion.matches)) {
@@ -411,9 +492,9 @@
         if (S.misses >= 3) {
           S.state = "over";
           sfx.whistle();
-          const best = S.score >= S.best && S.score > 0 ? " New best!" : "";
+          const best = S.score > previousBest ? " New best!" : "";
           updateBar();
-          showOverlay("Full time", `You scored ${S.score} goal${S.score === 1 ? "" : "s"}.${best}`, "Play again");
+          showOverlay("Full time", `You scored ${S.score} goal${S.score === 1 ? "" : "s"}.${best}`, "Play again", "play", document.activeElement === canvas);
         } else resetShot();
       }
     }
@@ -498,7 +579,7 @@
       ctx.save();
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.clip();
       ctx.translate(b.x, b.y);
-      if (S.shot) ctx.rotate(S.shot.t * 14);
+      if (S.shot && !motion.matches) ctx.rotate(S.shot.t * 14);
       ctx.drawImage(ballImg, -b.r * 1.08, -b.r * 1.08, b.r * 2.16, b.r * 2.16);
       ctx.restore();
     } else {
@@ -511,7 +592,7 @@
 
     // Result text
     if (S.state === "result" && S.msg) {
-      const sc = Math.min(1, S.resultT * 5);
+      const sc = motion.matches ? 1 : Math.min(1, S.resultT * 5);
       ctx.save();
       ctx.translate(W / 2, 330);
       ctx.scale(sc, sc);
@@ -526,9 +607,14 @@
   // Older browsers without roundRect
   if (!ctx.roundRect) ctx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
 
+  motion.addEventListener("change", () => {
+    if (motion.matches) { S.confetti = []; }
+    render();
+    wake();
+  });
   surface.onResize(render);
   ballImg.addEventListener("load", render);
   updateBar();
   render();
-  requestAnimationFrame(loop);
+  wake();
 })();
