@@ -1,0 +1,61 @@
+/* arcade.css — the 100-game arcade section (uses the colours from style.css) */
+#arcade { margin-top: 72px; scroll-margin-top: 20px; }
+#arcade .section-heading { margin-bottom: 26px; }
+
+.arcade-tools { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-bottom: 14px; }
+.arcade-search, .arcade-pick {
+  display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 18px;
+  background: #fff; border: 1px solid var(--ink); border-radius: 8px;
+}
+.arcade-search:focus-within, .arcade-pick:focus-within { box-shadow: 0 0 0 3px var(--lime); }
+.arcade-search svg { flex: none; }
+.arcade-search input, .arcade-pick select {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+  font: inherit; font-size: 16px; color: var(--ink); padding: 10px 0;
+}
+.arcade-pick select { cursor: pointer; }
+.arcade-clear {
+  border: 0; background: transparent; font: inherit; font-size: 22px; line-height: 1;
+  cursor: pointer; color: #667267; padding: 4px 8px;
+}
+.arcade-go, .arcade-play {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  padding: 11px 18px; border: 0; border-radius: 5px; background: var(--lime); color: var(--ink);
+  font: inherit; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+.arcade-go:hover, .arcade-play:hover { background: #eff7b0; transform: translateY(-1px); }
+.arcade-go:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.sr-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+.arcade-meta { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #667267; margin: 0 0 18px; }
+
+.arcade-grid {
+  list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px;
+}
+.arcade-card {
+  position: relative; display: flex; flex-direction: column; gap: 8px; min-height: 150px;
+  padding: 16px; border-radius: 8px; overflow: hidden; color: var(--chalk);
+  background: repeating-linear-gradient(90deg, var(--grass) 0 40px, var(--grass-light) 40px 80px);
+}
+.arcade-card[hidden] { display: none; }
+.arcade-num { font: 900 38px/1 var(--display); color: rgba(246, 245, 237, .35); }
+.arcade-card h3 { margin: 0; font-size: 17px; line-height: 1.2; }
+.arcade-card p {
+  margin: 0; font-size: 12px; line-height: 1.45; color: rgba(246, 245, 237, .75);
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.arcade-card .arcade-play { margin-top: auto; width: 100%; }
+.arcade-card .arcade-play:focus-visible { outline: 3px solid var(--chalk); outline-offset: 3px; }
+
+.arcade-empty { padding: 30px; border: 1px dashed #153f3055; border-radius: 8px; text-align: center; color: #667267; }
+.arcade-empty[hidden] { display: none; }
+.arcade-empty button { font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0; text-decoration: underline; cursor: pointer; }
+
+@media (max-width: 800px) {
+  .arcade-tools { grid-template-columns: 1fr; }
+  .arcade-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .arcade-card { min-height: 130px; padding: 12px; }
+  .arcade-num { font-size: 30px; }
+}

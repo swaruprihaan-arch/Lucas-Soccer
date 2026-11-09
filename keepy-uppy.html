@@ -27,12 +27,13 @@
   </nav>
   <main class="keepy-main">
     <section id="game" aria-labelledby="game-heading">
-      <a class="back-link" href="index.html#projects">← Back to my projects</a>
+      <a class="back-link" href="index.html#projects">← Back to the line-up</a>
       <p class="eyebrow">PROJECT 02 · ON THE TRAINING GROUND</p>
-      <h2 id="game-heading">Keepy-Uppy<span>.</span></h2>
-      <p class="game-sub">Tap the ball before it hits the grass. It gets heavier and smaller every touch, and after 10 touches the wind joins in. Knock it through a star for +3.</p>
+      <h1 id="game-heading">Keepy-Uppy<span>.</span></h1>
+      <p class="game-sub">Tap the ball before it hits the grass. Each touch scores a point. Collect a star for 3 extra points. The ball gets smaller and the challenge grows as you go.</p>
       <div class="game-frame">
         <div class="game-viewport">
+          <p class="sr-only" role="status" data-out="announcement" aria-atomic="true"></p>
           <canvas id="keepy" width="800" height="520" tabindex="0" aria-label="Keepy-Uppy game. Tap or click the ball, or press Space, to keep it in the air.">Your browser needs canvas support to play this game.</canvas>
           <div class="game-overlay" data-screen="start">
             <div>
@@ -43,7 +44,7 @@
           </div>
         </div>
         <div class="game-bar">
-          <span>Touches: <b data-out="score">0</b></span>
+          <span>Score: <b data-out="score">0</b></span>
           <span>Best: <b data-out="best">0</b></span>
           <span>Level: <b data-out="level">1</b></span>
           <span>Stars: <b data-out="stars">0</b></span>
@@ -51,10 +52,11 @@
         </div>
       </div>
       <noscript><p class="game-help">Enable JavaScript to play Keepy-Uppy.</p></noscript>
-      <p class="game-help">Tip: the pink ring means the ball is close to the grass. Tap it now!</p>
+      <p class="game-help"><span class="control-hint">Space to keep it up · ← → to steer · Esc to pause</span>Tip: the pink ring means the ball is close to the grass. Tap it now!</p>
     </section>
   </main>
   <footer><a class="wordmark" href="index.html">THE KICKABOUT<span class="brand-dot">.</span></a><p>Made with curiosity, HTML & CSS. Still learning. Always playing.</p><a href="#">Back to the top ↑</a></footer>
+  <script src="site.js" defer></script>
   <script src="keepy.js" defer></script>
 </body>
 </html>

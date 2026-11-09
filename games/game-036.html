@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153f30">
+  <title>Game 36 — The Kickabout</title>
+  <link rel="icon" href="../ball.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="game-page.css">
+</head>
+<body data-game-id="36">
+  <!--
+    GAME SLOT 36. Build this game here.
+    1. Set its title, description and tags in games/games.js (entry id: 36).
+    2. Put the game inside <div class="game-stage" id="stage"> (canvas or HTML).
+    3. Add your script below game-page.js. Keep paths relative (../ball.png).
+  -->
+  <nav class="navigation" aria-label="Main navigation">
+    <a class="wordmark" href="../index.html" aria-label="The Kickabout home"><span class="brand-icon" aria-hidden="true">✳</span> THE KICKABOUT<span class="brand-dot">.</span></a>
+    <div class="nav-links"><a class="nav-play" href="../index.html#arcade">The arcade <span aria-hidden="true">↗</span></a></div>
+  </nav>
+  <main class="game-page">
+    <a class="back-link" href="../index.html#arcade">← Back to the arcade</a>
+    <p class="eyebrow">GAME 36</p>
+    <h1 class="game-page-title" data-game-title></h1>
+    <p class="game-page-desc" data-game-desc></p>
+    <div class="game-stage" id="stage"></div>
+    <nav class="game-page-nav" aria-label="Other games">
+      <a class="button" data-prev href="#">← Previous game</a>
+      <a class="button" data-next href="#">Next game →</a>
+    </nav>
+  </main>
+  <script src="games.js"></script>
+  <script src="game-page.js"></script>
+</body>
+</html>

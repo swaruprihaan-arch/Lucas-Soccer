@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="arcade.css">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -34,6 +35,26 @@
         <li class="project"><span class="number" aria-hidden="true">01</span><div class="details"><span class="project-label">ON THE PITCH <i></i></span><h3>Penalty Shootout</h3><p>One ball. Three chances. Can you beat the keeper?</p></div><a class="button" href="#game">Play the game <span aria-hidden="true">↗</span></a></li>
         <li class="project"><span class="number" aria-hidden="true">02</span><div class="details"><span class="project-label">ON THE TRAINING GROUND <i></i></span><h3>Keepy-Uppy</h3><p>Don't let it touch the grass. How many touches can you do?</p></div><a class="button" href="keepy-uppy.html">Play the game <span aria-hidden="true">↗</span></a></li>
       </ol>
+    </section>
+
+    <section id="arcade" aria-labelledby="arcade-heading">
+      <div class="section-heading"><div><p class="eyebrow">THE ARCADE · 100 GAMES</p><h2 id="arcade-heading">Find a game<span>.</span></h2></div><p>Describe the game you want,<br>or pick one from the list.</p></div>
+      <div class="arcade-tools">
+        <form class="arcade-search" role="search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <label class="sr-label" for="arcade-search">Describe a game</label>
+          <input id="arcade-search" type="search" autocomplete="off" placeholder="Describe a game, e.g. &quot;shoot past the goalie&quot;">
+          <button class="arcade-clear" type="button" data-arcade-clear aria-label="Clear search" hidden>×</button>
+        </form>
+        <div class="arcade-pick">
+          <label class="sr-label" for="arcade-select">Choose a game</label>
+          <select id="arcade-select"></select>
+          <button class="arcade-go" type="button" data-arcade-go>Play Now</button>
+        </div>
+      </div>
+      <p class="arcade-meta"><span data-arcade-count aria-live="polite">All 100 games</span><span>Tip: type a number to jump to that game.</span></p>
+      <ol class="arcade-grid"></ol>
+      <p class="arcade-empty" hidden>No games match that yet. Try other words, or <button type="button" data-arcade-showall>show all 100 games</button>.</p>
     </section>
 
     <section id="game" aria-labelledby="game-heading">
@@ -64,6 +85,9 @@
     </section>
   </main>
   <footer><a class="wordmark" href="#">THE KICKABOUT<span class="brand-dot">.</span></a><p>Made with curiosity, HTML & CSS. Still learning. Always playing.</p><a href="#">Back to the top ↑</a></footer>
+  <script src="site.js" defer></script>
   <script src="game.js" defer></script>
+  <script src="games/games.js"></script>
+  <script src="arcade.js" defer></script>
 </body>
 </html>

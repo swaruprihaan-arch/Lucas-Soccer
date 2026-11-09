@@ -7,8 +7,11 @@
   "use strict";
 
   const canvas = document.getElementById("keepy");
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width, H = canvas.height;
+  const { storage, motion, createSound, prepareCanvas, showCanvasError } = window.Kickabout;
+  const W = 800, H = 520;
+  const surface = prepareCanvas(canvas, W, H);
+  const ctx = surface.context;
+  if (!ctx) { showCanvasError(canvas); return; }
   const overlay = document.querySelector(".game-overlay");
   const out = n => document.querySelector(`[data-out="${n}"]`);
   const muteBtn = document.querySelector('[data-action="mute"]');
@@ -16,23 +19,8 @@
   const GROUND = H - 40;
 
   /* ---------- Sounds (made in the browser, no files) ---------- */
-  let audio = null;
-  let muted = localStorage.getItem("lucas-muted") === "1";
-  function beep(freq, time, type, vol, slideTo) {
-    if (muted) return;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === "suspended") audio.resume();
-      const o = audio.createOscillator(), g = audio.createGain();
-      o.type = type || "sine";
-      o.frequency.setValueAtTime(freq, audio.currentTime);
-      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, audio.currentTime + time);
-      g.gain.setValueAtTime(vol || 0.15, audio.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + time);
-      o.connect(g).connect(audio.destination);
-      o.start(); o.stop(audio.currentTime + time);
-    } catch (e) { /* sound is optional */ }
-  }
+  const sound = createSound();
+  const beep = sound.beep;
   const sfx = {
     touch: n => beep(180 + Math.min(n, 40) * 12, 0.1, "triangle", 0.25, 90),
     wall: () => beep(240, 0.05, "square", 0.05),
@@ -46,7 +34,7 @@
 
   const S = {
     state: "start",            // start | play | over
-    touches: 0, best: +(localStorage.getItem("lucas-keepy-best") || 0),
+    touches: 0, hits: 0, best: storage.score("lucas-keepy-best"),
     ball: { x: W / 2, y: GROUND - 160, vx: 0, vy: 0, r: 42, spin: 0, va: 0 },
     wind: 0, windTarget: 0, windT: 0,
     star: null, stars: 0,
@@ -63,45 +51,55 @@
     out("best").textContent = S.best;
     out("level").textContent = level();
     out("stars").textContent = S.stars;
-    muteBtn.textContent = muted ? "Sound off" : "Sound on";
-    muteBtn.setAttribute("aria-pressed", String(!muted));
+    muteBtn.textContent = sound.muted ? "Sound off" : "Sound on";
+    muteBtn.setAttribute("aria-pressed", String(!sound.muted));
     pauseBtn.disabled = S.state !== "play" && !paused;
     pauseBtn.textContent = paused ? "Resume" : "Pause";
   }
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
-    localStorage.setItem("lucas-muted", muted ? "1" : "0");
-    updateBar();
-  });
+  muteBtn.addEventListener("click", () => sound.toggle());
+  sound.onChange(updateBar);
 
   let paused = false;
-  function setPaused(v) {
+  let inView = true;
+  let endTimer = 0;
+  let lastTouch = -Infinity;
+  let previousBest = S.best;
+  const announce = text => { out("announcement").textContent = text; };
+  function setPaused(v, focus = true) {
     if (S.state !== "play") return;
     paused = v;
-    if (paused) showOverlay("Half-time", "Take a breather. The ball will wait.", "Back to it", "resume");
-    else overlay.hidden = true;
+    if (paused) showOverlay("Half-time", "Take a breather. The ball will wait.", "Back to it", "resume", focus);
+    else {
+      overlay.hidden = true;
+      last = performance.now();
+      canvas.focus({ preventScroll: true });
+    }
     updateBar();
   }
   pauseBtn.addEventListener("click", () => setPaused(!paused));
 
-  function showOverlay(title, text, label, action) {
+  function showOverlay(title, text, label, action, focus = true) {
     overlay.innerHTML = `<div><h3>${title}</h3><p>${text}</p><button class="big" type="button" data-action="${action}">${label}</button></div>`;
     overlay.hidden = false;
-    overlay.querySelector("button").focus({ preventScroll: true });
+    if (focus) overlay.querySelector("button").focus({ preventScroll: true });
   }
   overlay.addEventListener("click", e => {
     const b = e.target.closest("button");
     if (!b) return;
     if (b.dataset.action === "resume") setPaused(false);
-    else start();
+    else if (b.dataset.action === "play") start();
   });
 
   function start() {
-    S.state = "play"; S.touches = 0; S.stars = 0;
-    S.ball.x = W / 2; S.ball.y = GROUND - 200; S.ball.vx = 0; S.ball.vy = -250; S.ball.r = 42;
-    S.wind = 0; S.windTarget = 0; S.star = null; S.pops = [];
+    clearTimeout(endTimer);
+    previousBest = S.best;
+    lastTouch = -Infinity;
+    S.state = "play"; S.touches = 0; S.hits = 0; S.stars = 0;
+    S.ball.x = W / 2; S.ball.y = GROUND - 200; S.ball.vx = 0; S.ball.vy = -250; S.ball.r = 42; S.ball.spin = 0; S.ball.va = 0;
+    S.wind = 0; S.windTarget = 0; S.star = null; S.pops = []; S.dust = []; S.shake = 0;
     paused = false; overlay.hidden = true;
     sfx.whistle();
+    announce("Kick off. Keep the ball in the air.");
     updateBar();
     canvas.focus({ preventScroll: true });
   }
@@ -117,10 +115,14 @@
   }
   function touch(px, py) {
     if (S.state !== "play" || paused) return false;
+    const now = performance.now();
+    if (now - lastTouch < 110) return false;
     const b = S.ball;
     const dx = b.x - px, dy = b.y - py;
-    const hitR = b.r + 22;                              // a little forgiveness
+    const hitR = Math.max(b.r + 22, 24 * W / (canvas.getBoundingClientRect().width || W));                              // a little forgiveness
     if (dx * dx + dy * dy > hitR * hitR) return false;
+    lastTouch = now;
+    S.hits++;
     // Hit the side of the ball and it flies the other way
     const side = Math.max(-1, Math.min(1, dx / b.r));
     b.vx = side * 420 + (Math.random() - 0.5) * 80;
@@ -128,48 +130,63 @@
     b.va = side * 14;
     S.touches++;
     S.ball.r = ballRadius();
-    S.pops.push({ x: b.x, y: b.y - b.r - 10, t: 0, text: String(S.touches) });
+    if (!motion.matches) S.pops.push({ x: b.x, y: b.y - b.r - 10, t: 0, text: String(S.touches) });
     sfx.touch(S.touches);
-    if (S.touches >= 10 && S.touches % 4 === 0) S.windTarget = (Math.random() - 0.5) * (200 + S.touches * 14);
+    if (S.touches >= 10 && (S.windTarget === 0 || S.hits % 4 === 0)) S.windTarget = (Math.random() - 0.5) * (200 + S.touches * 14);
     if (!S.star && S.touches >= 3 && Math.random() < 0.4) spawnStar();
-    if (S.touches > S.best) { S.best = S.touches; localStorage.setItem("lucas-keepy-best", String(S.best)); }
+    if (S.touches > S.best) { S.best = S.touches; storage.set("lucas-keepy-best", String(S.best)); }
     updateBar();
     return true;
   }
   canvas.addEventListener("pointerdown", e => {
+    if (e.button !== 0 || e.isPrimary === false) return;
     e.preventDefault();
+    canvas.focus({ preventScroll: true });
     const p = toCanvas(e);
     touch(p.x, p.y);
   });
-  // Keyboard: Space/Up touches the ball wherever it is (aimed at its centre)
-  document.addEventListener("keydown", e => {
-    if (e.target.closest && e.target.closest("button, a, input")) return;
-    if (e.key === "Escape" || e.key === "p") { setPaused(!paused); e.preventDefault(); return; }
+  // Only the focused game handles keys; navigation and page scrolling stay native.
+  canvas.addEventListener("keydown", e => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const key = e.key.toLowerCase();
+    if (!["escape", "p", " ", "enter", "arrowup", "w", "arrowleft", "a", "arrowright", "d"].includes(key)) return;
+    e.preventDefault();
+    if (e.repeat) return;
+    if (key === "escape" || key === "p") { setPaused(!paused); return; }
     if (S.state !== "play") {
-      if ((e.key === " " || e.key === "Enter") && document.activeElement === canvas) { start(); e.preventDefault(); }
+      if (key === " " || key === "enter") start();
       return;
     }
     const b = S.ball;
-    if (e.key === " " || e.key === "ArrowUp" || e.key === "w") touch(b.x, b.y);
-    else if (e.key === "ArrowLeft" || e.key === "a") touch(b.x + b.r * 0.6, b.y);   // push it left
-    else if (e.key === "ArrowRight" || e.key === "d") touch(b.x - b.r * 0.6, b.y);  // push it right
-    else return;
-    e.preventDefault();
+    if ([" ", "enter", "arrowup", "w"].includes(key)) touch(b.x, b.y);
+    else if (key === "arrowleft" || key === "a") touch(b.x + b.r * 0.6, b.y);
+    else if (key === "arrowright" || key === "d") touch(b.x - b.r * 0.6, b.y);
   });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) setPaused(true, false);
+  });
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      if (!inView) setPaused(true, false);
+    }).observe(canvas);
+  }
 
   /* ---------- Game loop ---------- */
   let last = performance.now();
   function loop(t) {
     const dt = Math.min(0.033, (t - last) / 1000);
     last = t;
-    if (!paused) update(dt);
-    render();
+    if (!document.hidden && inView) {
+      if (!paused) update(dt);
+      render();
+    }
     requestAnimationFrame(loop);
   }
 
   function update(dt) {
     const b = S.ball;
-    if (S.state === "start" || S.state === "over") {
+    if (!motion.matches && (S.state === "start" || S.state === "over")) {
       // Idle: the ball bounces gently on the grass
       b.vy += 1400 * dt; b.y += b.vy * dt;
       if (b.y > GROUND - b.r) { b.y = GROUND - b.r; b.vy = -620; }
@@ -187,20 +204,23 @@
       if (S.star) {
         S.star.t += dt;
         if (Math.hypot(S.star.x - b.x, S.star.y - b.y) < b.r + 22) {
-          S.stars++; S.touches += 3;
-          S.pops.push({ x: S.star.x, y: S.star.y, t: 0, text: "+3" });
+          S.stars++; S.touches += 3; S.ball.r = ballRadius();
+          announce(`Bonus star! Score: ${S.touches}.`);
+          if (!motion.matches) S.pops.push({ x: S.star.x, y: S.star.y, t: 0, text: "+3" });
           S.star = null; sfx.star();
-          if (S.touches > S.best) { S.best = S.touches; localStorage.setItem("lucas-keepy-best", String(S.best)); }
+          if (S.touches > S.best) { S.best = S.touches; storage.set("lucas-keepy-best", String(S.best)); }
           updateBar();
         } else if (S.star.t > 6) S.star = null;
       }
       if (b.y > GROUND - b.r) {
         b.y = GROUND - b.r; b.vy = -380; b.vx *= 0.5;
-        S.state = "over"; S.shake = 0.35; sfx.drop();
-        for (let i = 0; i < 24; i++) S.dust.push({ x: b.x, y: GROUND, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 220, life: 0.8 });
-        const best = S.touches >= S.best && S.touches > 0 ? " New best!" : "";
-        setTimeout(() => {
-          showOverlay("It hit the grass", `You kept it up for ${S.touches} touch${S.touches === 1 ? "" : "es"}.${best}`, "Go again", "play");
+        S.state = "over"; S.shake = motion.matches ? 0 : 0.35; sfx.drop();
+        for (let i = 0; i < (motion.matches ? 0 : 24); i++) S.dust.push({ x: b.x, y: GROUND, vx: (Math.random() - 0.5) * 300, vy: -Math.random() * 220, life: 0.8 });
+        const best = S.touches > previousBest ? " New best!" : "";
+        updateBar();
+        endTimer = setTimeout(() => {
+          if (S.state !== "over") return;
+          showOverlay("It hit the grass", `You scored ${S.touches} point${S.touches === 1 ? "" : "s"}: ${S.hits} touch${S.hits === 1 ? "" : "es"} and ${S.stars} bonus star${S.stars === 1 ? "" : "s"}.${best}`, "Go again", "play", !document.hidden && inView && document.activeElement === canvas);
           updateBar();
         }, 650);
       }
@@ -214,7 +234,7 @@
 
   function render() {
     ctx.save();
-    if (S.shake) ctx.translate((Math.random() - 0.5) * 12 * S.shake, (Math.random() - 0.5) * 12 * S.shake);
+    if (S.shake && !motion.matches) ctx.translate((Math.random() - 0.5) * 12 * S.shake, (Math.random() - 0.5) * 12 * S.shake);
 
     // Sky over the stadium, then grass
     const sky = ctx.createLinearGradient(0, 0, 0, GROUND);
@@ -244,9 +264,9 @@
 
     // Bonus star
     if (S.star) {
-      const s = S.star, k = 1 + Math.sin(s.t * 6) * 0.1;
-      ctx.save(); ctx.translate(s.x, s.y); ctx.scale(k, k); ctx.rotate(s.t);
-      ctx.fillStyle = s.t > 4.5 && Math.floor(s.t * 8) % 2 ? "rgba(228,239,134,.3)" : "#e4ef86";
+      const s = S.star, k = motion.matches ? 1 : 1 + Math.sin(s.t * 6) * 0.1;
+      ctx.save(); ctx.translate(s.x, s.y); ctx.scale(k, k); if (!motion.matches) ctx.rotate(s.t);
+      ctx.fillStyle = !motion.matches && s.t > 4.5 && Math.floor(s.t * 8) % 2 ? "rgba(228,239,134,.3)" : "#e4ef86";
       ctx.beginPath();
       for (let i = 0; i < 10; i++) {
         const r = i % 2 ? 9 : 20, a = i * Math.PI / 5 - Math.PI / 2;
@@ -293,6 +313,9 @@
     ctx.restore();
   }
 
+  surface.onResize(render);
+  ballImg.addEventListener("load", render);
   updateBar();
+  render();
   requestAnimationFrame(loop);
 })();

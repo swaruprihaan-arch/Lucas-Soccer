@@ -9,30 +9,9 @@
   "use strict";
 
   /* ---------- Tiny sound effects (no audio files needed) ---------- */
-  const storage = {
-    get(key) { try { return localStorage.getItem(key); } catch { return null; } },
-    set(key, value) { try { localStorage.setItem(key, value); } catch { /* Play without persistence. */ } }
-  };
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let audio = null;
-  let muted = storage.get("lucas-muted") === "1";
-  function beep(freq, time, type, vol, slideTo) {
-    if (muted) return;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === "suspended") audio.resume();
-      const o = audio.createOscillator();
-      const g = audio.createGain();
-      o.type = type || "sine";
-      o.frequency.setValueAtTime(freq, audio.currentTime);
-      if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, audio.currentTime + time);
-      g.gain.setValueAtTime(vol || 0.15, audio.currentTime);
-      g.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + time);
-      o.connect(g).connect(audio.destination);
-      o.start();
-      o.stop(audio.currentTime + time);
-    } catch (e) { /* sound is optional */ }
-  }
+  const { storage, motion, createSound, prepareCanvas, showCanvasError } = window.Kickabout;
+  const sound = createSound();
+  const beep = sound.beep;
   const sfx = {
     kick: () => beep(140, 0.12, "triangle", 0.3, 60),
     bounce: () => beep(220, 0.06, "square", 0.05),
@@ -125,7 +104,7 @@
       setTimeout(() => {
         const sx = x, sy = y, start = performance.now();
         (function back(t) {
-          const k = reducedMotion ? 1 : Math.min(1, (t - start) / 600), e = 1 - Math.pow(1 - k, 3);
+          const k = motion.matches ? 1 : Math.min(1, (t - start) / 600), e = 1 - Math.pow(1 - k, 3);
           x = sx * (1 - e); y = sy * (1 - e); angle += (side < 0 ? 12 : -12);
           draw();
           if (k < 1) requestAnimationFrame(back); else celebrating = false;
@@ -223,14 +202,15 @@
   const section = document.querySelector("#game");
 
   const canvas = section.querySelector("canvas");
-  const ctx = canvas.getContext("2d");
+  const surface = prepareCanvas(canvas, 800, 480);
+  const ctx = surface.context;
+  if (!ctx) { showCanvasError(canvas); return; }
   const overlay = section.querySelector(".game-overlay");
   const out = n => section.querySelector(`[data-out="${n}"]`);
   const muteBtn = section.querySelector('[data-action="mute"]');
   const pauseBtn = section.querySelector('[data-action="pause"]');
   let paused = false;
   let inView = true;
-  const savedBest = Number(storage.get("lucas-best"));
   const W = 800, H = 480;
   const GOAL = { l: 190, r: 610, t: 70, b: 230 };      // goal mouth
   const SPOT = { x: 400, y: 420 };
@@ -240,7 +220,7 @@
 
   const S = {
     state: "start",          // start | aim | flying | result | over
-    score: 0, misses: 0, best: Number.isSafeInteger(savedBest) && savedBest >= 0 ? savedBest : 0,
+    score: 0, misses: 0, best: storage.score("lucas-best"),
     aim: { x: 400, y: 150 },
     keeper: { x: 400, dive: 0, diveTarget: 400, t: 0, phase: 0 },
     ball: { x: SPOT.x, y: SPOT.y, r: 22 },
@@ -259,16 +239,13 @@
     out("level").textContent = level();
     out("lives").setAttribute("aria-label", `${3 - S.misses} misses remaining`);
     out("lives").textContent = "⚽".repeat(3 - S.misses) + "·".repeat(S.misses);
-    muteBtn.textContent = muted ? "Sound off" : "Sound on";
+    muteBtn.textContent = sound.muted ? "Sound off" : "Sound on";
     pauseBtn.disabled = S.state === "start" || S.state === "over";
     pauseBtn.textContent = paused ? "Resume" : "Pause";
-    muteBtn.setAttribute("aria-pressed", String(!muted));
+    muteBtn.setAttribute("aria-pressed", String(!sound.muted));
   }
-  muteBtn.addEventListener("click", () => {
-    muted = !muted;
-    storage.set("lucas-muted", muted ? "1" : "0");
-    updateBar();
-  });
+  muteBtn.addEventListener("click", () => sound.toggle());
+  sound.onChange(updateBar);
 
   function showOverlay(title, text, button, action = "play", focus = true) {
     overlay.innerHTML = `<div><h3>${title}</h3><p>${text}</p><button class="big" type="button" data-action="${action}">${button}</button></div>`;
@@ -348,7 +325,7 @@
       S.misses++; S.msg = "Saved!"; S.msgColor = "#f0559a"; sfx.save();
     } else if (inGoal) {
       S.score++; S.msg = "GOAL!"; S.msgColor = "#ddeb4a"; sfx.goal();
-      for (let i = 0; i < (reducedMotion ? 0 : 60); i++) S.confetti.push({ x: p.x, y: p.y, vx: (Math.random() - .5) * 500, vy: -Math.random() * 400, life: 1.2,
+      for (let i = 0; i < (motion.matches ? 0 : 60); i++) S.confetti.push({ x: p.x, y: p.y, vx: (Math.random() - .5) * 500, vy: -Math.random() * 400, life: 1.2,
         c: ["#ddeb4a", "#f0559a", "#f6f8ee", "#5fd3c6"][i % 4] });
       if (S.score > S.best) { S.best = S.score; storage.set("lucas-best", String(S.best)); }
     } else {
@@ -406,7 +383,7 @@
   }
   function update(dt) {
     const k = S.keeper;
-    if (S.state === "aim" || (S.state === "start" && !reducedMotion)) {
+    if (S.state === "aim" || (S.state === "start" && !motion.matches)) {
       // Keeper shuffles along his line, faster every level
       k.phase += dt * keeperSpeed() / 140;
       const span = (GOAL.r - GOAL.l) / 2 - 50;
@@ -549,6 +526,8 @@
   // Older browsers without roundRect
   if (!ctx.roundRect) ctx.roundRect = function (x, y, w, h) { this.rect(x, y, w, h); };
 
+  surface.onResize(render);
+  ballImg.addEventListener("load", render);
   updateBar();
   render();
   requestAnimationFrame(loop);

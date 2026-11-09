@@ -1,0 +1,30 @@
+/* games/game-page.css — layout shared by every page in games/ (uses style.css colours). */
+.game-page { max-width: 1150px; margin: auto; padding: 40px 36px 80px; }
+.back-link { display: inline-block; margin: 0 0 22px; font-size: 14px; font-weight: 700; text-decoration: none; }
+.back-link:hover { text-decoration: underline; }
+.game-page .eyebrow { color: #637265; margin-bottom: 10px; }
+.game-page-title { color: var(--ink); font-size: clamp(40px, 6vw, 72px); margin: 0 0 10px; }
+.game-page-desc { color: #667267; margin: 0 0 24px; max-width: 640px; }
+.game-stage { position: relative; min-height: 420px; border: 1px solid var(--ink); border-radius: 10px; overflow: hidden; }
+.game-stage.is-empty {
+  display: grid; place-items: center;
+  background: repeating-linear-gradient(90deg, var(--grass, #296343) 0 110px, var(--grass-light, #2d6948) 110px 220px);
+}
+.game-stage.is-empty::before {
+  content: ""; position: absolute; width: 190px; aspect-ratio: 1; border-radius: 50%;
+  border: 1px solid rgba(246, 245, 237, .4);
+}
+.game-stage.is-empty::after {
+  content: ""; position: absolute; width: 110px; aspect-ratio: 1; border-radius: 50%;
+  background: url("../ball.png") center / cover; box-shadow: 10px 20px 20px -12px #08271899;
+}
+.stage-number {
+  position: absolute; left: 28px; bottom: 14px; color: rgba(246, 245, 237, .25);
+  font: 900 96px/1 var(--display, Impact, sans-serif);
+}
+.game-page-nav { display: flex; justify-content: space-between; gap: 16px; margin-top: 28px; }
+.game-page-nav .button { display: inline-flex; }
+@media (max-width: 800px) {
+  .game-page { padding: 28px 20px 55px; }
+  .game-stage { min-height: 300px; }
+}
