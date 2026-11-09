@@ -5,7 +5,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 function arcade() {
-  let focused;
+  let focused, timerId = 0;
+  const timers = new Map();
   class Element {
     constructor() { this.children = []; this.handlers = {}; this.value = ''; this.style = {}; this.hidden = false; }
     addEventListener(type, fn) { this.handlers[type] = fn; }
@@ -21,7 +22,7 @@ function arcade() {
   }
   const elements = new Map();
   const root = { querySelector(selector) { if (!elements.has(selector)) elements.set(selector, new Element()); return elements.get(selector); } };
-  const sandbox = { window: {}, document: { getElementById: () => root }, location: {}, setTimeout: fn => fn(), clearTimeout() {} };
+  const sandbox = { window: {}, document: { getElementById: () => root }, location: {}, setTimeout(fn) { timers.set(++timerId, fn); return timerId; }, clearTimeout(id) { timers.delete(id); } };
   vm.createContext(sandbox);
   for (const file of ['games/games.js', 'arcade.js']) vm.runInContext(fs.readFileSync(path.join(__dirname, '..', file), 'utf8'), sandbox);
   const input = elements.get('#arcade-search');
@@ -30,6 +31,7 @@ function arcade() {
     visible() { return elements.get('.arcade-grid').children.filter(card => !card.hidden).map(card => +card.dataset.id); },
     submit() { elements.get('.arcade-search').handlers.submit({ preventDefault() {} }); },
     focusedId() { return elements.get('.arcade-grid').children.find(card => card.link === focused)?.dataset.id; },
+    get pendingTimers() { return timers.size; },
     elements, input, get focused() { return focused; }
   };
 }
@@ -64,4 +66,13 @@ test('arcade: generic wording and Escape produce a useful default', () => {
   const a = arcade(); a.search('I want to play a game'); assert.equal(a.visible().length, 100);
   a.search('goalie'); a.input.handlers.keydown({ key: 'Escape', preventDefault() {} });
   assert.equal(a.visible().length, 100); assert.equal(a.input.value, '');
+});
+
+
+test('arcade: submitting immediately cancels the delayed search and preserves focus', () => {
+  const a = arcade();
+  a.input.value = 'keepy'; a.input.handlers.input();
+  assert.equal(a.pendingTimers, 1);
+  a.submit();
+  assert.equal(a.pendingTimers, 0); assert.equal(a.focusedId(), '2');
 });

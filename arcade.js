@@ -96,6 +96,7 @@
   input.addEventListener("input", () => { clearTimeout(t); t = setTimeout(run, 80); });
   root.querySelector(".arcade-search").addEventListener("submit", e => {
     e.preventDefault();
+    clearTimeout(t);
     run();
     const first = [...grid.children].find(c => !c.hidden);
     if (first) first.querySelector(".arcade-play").focus();
